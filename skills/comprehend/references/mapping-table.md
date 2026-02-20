@@ -38,4 +38,4 @@ persistent REPL as the primary mechanism.
 | Subagent output too large | Have the subagent store results in the REPL instead of returning them. The parent reads from the REPL — no context window wasted on large return values. |
 | Binary files | Use the REPL: `import subprocess; result = subprocess.run(["file", path], capture_output=True)`. For binary formats (PDF, images), use appropriate Python libraries in the REPL. |
 | Context is a URL or API | Fetch in the REPL: `import urllib.request; data = urllib.request.urlopen(url).read()`. Save to a REPL variable, then apply the standard assessment and chunking workflow. |
-| Very large number of files (100+) | Group files by directory or type in the REPL first. Fan out one subagent per group, not per file. Two-level decomposition with REPL as the aggregation layer. |
+| Very large number of files (100+) | Group files by directory or type in the REPL first. Fan out one subagent per group, not per file. Two-level comprehension with REPL as the aggregation layer. |

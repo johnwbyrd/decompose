@@ -1,6 +1,6 @@
-# Decomposition Patterns — Worked Examples
+# Comprehension Patterns — Worked Examples
 
-Five detailed examples showing the full assessment → decompose → aggregate workflow
+Five detailed examples showing the full assessment → comprehend → aggregate workflow
 using the persistent REPL and subagents.
 
 ## Pattern 1: Large Log File (500K lines)
@@ -184,7 +184,7 @@ All results flow through the REPL.
 
 5. Synthesize from the REPL into a final answer.
 
-**Key insight:** Two-phase decomposition avoids wasting deep analysis on
+**Key insight:** Two-phase comprehension avoids wasting deep analysis on
 irrelevant content. The fast relevance filter (Phase 1) uses lightweight
 subagents; only flagged sections get expensive deep analysis (Phase 2).
 

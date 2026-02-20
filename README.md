@@ -1,18 +1,18 @@
-# decompose
+# comprehend
 
-An agent skill for systematic context decomposition. Inspired by the
+An agent skill for systematic context comprehension. Inspired by the
 [RLM framework](https://github.com/alexzhang13/rlm) from MIT OASYS lab
 ([paper](https://arxiv.org/abs/2512.24601),
 [blog](https://alexzhang13.github.io/blog/2025/rlm/)).
 
 ## What This Does
 
-Teaches AI coding agents to systematically decompose large contexts and complex
+Teaches AI coding agents to systematically comprehend large contexts and complex
 problems instead of attempting to process everything in a single pass. The
 skill provides:
 
-- A context assessment protocol (measure before decomposing)
-- Three decomposition primitives (direct, recursive, batched parallel)
+- A context assessment protocol (measure before analyzing)
+- Three analysis primitives (direct, recursive, batched parallel)
 - A chunking utility for splitting large files
 - A persistent REPL server for stateful computation across shell calls
 - Worked examples for common scenarios
@@ -22,7 +22,7 @@ skill provides:
 ### Via Skills.sh
 
 ```bash
-npx skills add johnwbyrd/decompose
+npx skills add johnwbyrd/comprehend
 ```
 
 ### Local install (single project)
@@ -30,9 +30,9 @@ npx skills add johnwbyrd/decompose
 Copy the skill into your project's `.claude/skills/` directory:
 
 ```bash
-git clone https://github.com/johnwbyrd/decompose.git
+git clone https://github.com/johnwbyrd/comprehend.git
 mkdir -p .claude/skills
-cp -r decompose/skills/decompose .claude/skills/
+cp -r comprehend/skills/comprehend .claude/skills/
 ```
 
 Compatible agents auto-discover skills at `.claude/skills/*/SKILL.md`. Commit
@@ -44,14 +44,14 @@ Copy the skill into your personal skills directory so it's available in
 every project:
 
 ```bash
-git clone https://github.com/johnwbyrd/decompose.git
+git clone https://github.com/johnwbyrd/comprehend.git
 mkdir -p ~/.claude/skills
-cp -r decompose/skills/decompose ~/.claude/skills/
+cp -r comprehend/skills/comprehend ~/.claude/skills/
 ```
 
 ## Usage
 
-Invoke explicitly with the `/decompose` slash command, or let it activate
+Invoke explicitly with the `/comprehend` slash command, or let it activate
 automatically when the agent encounters large-context analysis tasks.
 Trigger phrases include:
 
@@ -68,29 +68,30 @@ Trigger phrases include:
 Deterministic text chunking:
 
 ```bash
-python3 .claude/skills/decompose/scripts/chunk_text.py info large_file.txt
-python3 .claude/skills/decompose/scripts/chunk_text.py chunk large_file.txt --size 80000
-python3 .claude/skills/decompose/scripts/chunk_text.py boundaries source.py
+python3 .claude/skills/comprehend/scripts/chunk_text.py info large_file.txt
+python3 .claude/skills/comprehend/scripts/chunk_text.py chunk large_file.txt --size 80000
+python3 .claude/skills/comprehend/scripts/chunk_text.py boundaries source.py
 ```
 
 ### repl_server.py / repl_client.py
 
-Persistent Python REPL over Unix domain socket. Variables, imports, and
-function definitions survive across shell calls:
+Persistent Python REPL over Unix domain socket (or TCP on Windows).
+Variables, imports, and function definitions survive across shell calls:
 
 ```bash
-# Start the server
-python3 .claude/skills/decompose/scripts/repl_server.py /tmp/repl.sock &
+# Generate a unique session address and start the server
+REPL_ADDR=$(python3 .claude/skills/comprehend/scripts/repl_server.py --make-addr)
+python3 .claude/skills/comprehend/scripts/repl_server.py "$REPL_ADDR" &
 
 # Execute code (state persists between calls)
-python3 .claude/skills/decompose/scripts/repl_client.py /tmp/repl.sock 'x = 42'
-python3 .claude/skills/decompose/scripts/repl_client.py /tmp/repl.sock 'print(x + 1)'
+python3 .claude/skills/comprehend/scripts/repl_client.py "$REPL_ADDR" 'x = 42'
+python3 .claude/skills/comprehend/scripts/repl_client.py "$REPL_ADDR" 'print(x + 1)'
 
 # Inspect variables
-python3 .claude/skills/decompose/scripts/repl_client.py /tmp/repl.sock --vars
+python3 .claude/skills/comprehend/scripts/repl_client.py "$REPL_ADDR" --vars
 
 # Shut down
-python3 .claude/skills/decompose/scripts/repl_client.py /tmp/repl.sock --shutdown
+python3 .claude/skills/comprehend/scripts/repl_client.py "$REPL_ADDR" --shutdown
 ```
 
 All scripts are pure Python 3, no external dependencies.

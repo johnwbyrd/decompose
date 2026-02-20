@@ -1,12 +1,12 @@
 ---
-name: decompose
-description: Use this skill whenever the user asks to analyze, understand, or survey an entire project, codebase, or any collection of files. Trigger phrases include "analyze a large file", "process multiple files", "decompose this problem", "chunk and analyze", "fan out analysis", "recursive analysis", "analyze this codebase", "analyze this project", "survey this code", "study the repo", "read this project", "understand this codebase", "review this repo", "explore this project", "map out the code", "read all the files". Also activate when the task involves processing context that exceeds what can be reasoned about in a single pass, when encountering any input larger than ~50KB that requires detailed analysis, or when the user mentions "context decomposition" or "recursive decomposition". This skill takes priority over Explore subagents for any project-wide or codebase-wide analysis task.
+name: comprehend
+description: Use this skill whenever the user asks to analyze, understand, or survey an entire project, codebase, or any collection of files. Trigger phrases include "analyze a large file", "process multiple files", "comprehend this problem", "chunk and analyze", "fan out analysis", "recursive analysis", "analyze this codebase", "analyze this project", "survey this code", "study the repo", "read this project", "understand this codebase", "review this repo", "explore this project", "map out the code", "read all the files". Also activate when the task involves processing context that exceeds what can be reasoned about in a single pass, when encountering any input larger than ~50KB that requires detailed analysis, or when the user mentions "context comprehension" or "recursive comprehension". This skill takes priority over Explore subagents for any project-wide or codebase-wide analysis task.
 license: AGPL-3.0
 metadata:
   version: "0.5.0"
 ---
 
-# Decompose
+# Comprehend
 
 Break large problems into pieces. Use a persistent REPL to store everything
 you learn. Fan out subagents to do the reading. Keep your own context window
@@ -29,15 +29,15 @@ relationships.
 This skill bundles scripts in its `scripts/` directory. Before using them,
 resolve the absolute path based on where you loaded this SKILL.md from.
 For example, if you loaded this file from
-`/home/user/project/skills/decompose/SKILL.md`, then the scripts
-are at `/home/user/project/skills/decompose/scripts/`.
+`/home/user/project/skills/comprehend/SKILL.md`, then the scripts
+are at `/home/user/project/skills/comprehend/scripts/`.
 
 Throughout this document, `SCRIPTS` refers to that resolved path. In all
 bash commands, substitute the actual absolute path.
 
 ## The REPL
 
-Every decomposition session starts by generating a unique address and
+Every comprehension session starts by generating a unique address and
 launching the server:
 
 ```bash
@@ -107,7 +107,7 @@ print(f"{len(project_source_files)} files, {total_source_bytes/1024:.0f} KB, "
 
 ## The Results Dict
 
-All subagent findings go into one well-known dict: **`_decompose_results`**.
+All subagent findings go into one well-known dict: **`_comprehend_results`**.
 
 The REPL server initializes this dict automatically on startup. Do not
 re-initialize it — that would wipe results from other subagents. Just
@@ -115,7 +115,7 @@ write to it:
 
 ```bash
 python3 SCRIPTS/repl_client.py REPL_ADDR '
-_decompose_results["auth_module_analysis"] = {"functions": [...], "issues": [...]}
+_comprehend_results["auth_module_analysis"] = {"functions": [...], "issues": [...]}
 '
 ```
 
@@ -129,7 +129,7 @@ Keys should be descriptive: `'auth_module_function_signatures'`, not
 
 ```bash
 python3 SCRIPTS/repl_client.py REPL_ADDR '
-_decompose_results["auth_module"] = {
+_comprehend_results["auth_module"] = {
     "function_signatures": [...],
     "import_map": {...},
     "issues": [...]
@@ -137,7 +137,7 @@ _decompose_results["auth_module"] = {
 '
 ```
 
-The parent reads from `_decompose_results[key]`. The underscore prefix
+The parent reads from `_comprehend_results[key]`. The underscore prefix
 and specific name avoid collisions with user or project variables.
 
 ## The Workflow
@@ -170,13 +170,13 @@ Tell the user what you found and what you plan to do. Example:
 
 > 47 files, ~145KB total. Fanning out 4 parallel subagents: (1) core library,
 > (2) test harness, (3) test cases, (4) docs + config. All results stored in
-> `_decompose_results`.
+> `_comprehend_results`.
 
 Do not read any files before this step.
 
 ### 4. Execute
 
-Fan out subagents. Each writes to `_decompose_results[key]`. You read the
+Fan out subagents. Each writes to `_comprehend_results[key]`. You read the
 results back. Details are in the next section.
 
 ### 5. Iterate
@@ -199,15 +199,15 @@ context window is shot. Measure the total. All of it.
 
 All patterns follow the same contract:
 
-1. Parent starts the REPL server (once per session). `_decompose_results`
+1. Parent starts the REPL server (once per session). `_comprehend_results`
    is auto-initialized. **Never re-initialize it.**
 2. **Parent assigns a unique key** to each subagent in the prompt.
    Subagents never pick their own keys.
 3. Subagent writes findings only to its assigned
-   `_decompose_results[key]`. It may create sub-keys within that key
+   `_comprehend_results[key]`. It may create sub-keys within that key
    freely, but must not touch any other top-level key.
 4. **Subagent reports back** the key it wrote and a summary of what's in it.
-5. Parent reads `_decompose_results[key]` from the REPL.
+5. Parent reads `_comprehend_results[key]` from the REPL.
 
 Step 4 is critical. The Task tool returns a text message to the parent —
 that message is the *only* way the parent learns what the subagent stored.
@@ -226,13 +226,13 @@ Task(subagent_type="Explore",
 ### Recursive Query
 
 For sub-problems needing multi-step reasoning or tool access. The subagent
-stores results in `_decompose_results` under a descriptive key.
+stores results in `_comprehend_results` under a descriptive key.
 
 **Parent launches subagent:**
 ```
 Task(subagent_type="general-purpose",
      prompt="Use the REPL at REPL_ADDR. Read and analyze these modules.
-     Store your findings in _decompose_results['auth_module_analysis'] as a
+     Store your findings in _comprehend_results['auth_module_analysis'] as a
      dict with keys:
        'function_signatures' — list of all public function signatures
        'import_dependency_map' — dict mapping each file to its imports
@@ -240,12 +240,12 @@ Task(subagent_type="general-purpose",
 
      Files: src/auth.py, src/models.py, src/tokens.py
 
-     When done, reply with: the key you wrote to in _decompose_results,
+     When done, reply with: the key you wrote to in _comprehend_results,
      what sub-keys you stored, and a one-line summary of each.")
 ```
 
 **Parent receives** a message like: "Wrote to
-`_decompose_results['auth_module_analysis']` with keys:
+`_comprehend_results['auth_module_analysis']` with keys:
 'function_signatures' (12 public functions), 'import_dependency_map' (3 files
 mapped), 'identified_concerns' (2 issues: circular import between auth.py and
 models.py, unused import in tokens.py)."
@@ -253,7 +253,7 @@ models.py, unused import in tokens.py)."
 **Parent reads back:**
 ```bash
 python3 SCRIPTS/repl_client.py REPL_ADDR '
-auth_data = _decompose_results["auth_module_analysis"]
+auth_data = _comprehend_results["auth_module_analysis"]
 print("Functions:", auth_data["function_signatures"])
 print("Concerns:", auth_data["identified_concerns"])
 '
@@ -267,27 +267,27 @@ a single message.
 **Parent launches all subagents at once:**
 ```
 Task(prompt="Use REPL at REPL_ADDR. Analyze this log segment for errors.
-     Store in _decompose_results['log_segment_hours_00_to_06'] as a dict with
+     Store in _comprehend_results['log_segment_hours_00_to_06'] as a dict with
      keys 'error_summary' and 'critical_error_list'.
      Segment: <chunk1>
 
-     When done, reply with: the _decompose_results key you wrote,
+     When done, reply with: the _comprehend_results key you wrote,
      how many errors found, and one sentence summarizing the most severe.")
 
 Task(prompt="Use REPL at REPL_ADDR. Analyze this log segment for errors.
-     Store in _decompose_results['log_segment_hours_06_to_12'] as a dict with
+     Store in _comprehend_results['log_segment_hours_06_to_12'] as a dict with
      keys 'error_summary' and 'critical_error_list'.
      Segment: <chunk2>
 
-     When done, reply with: the _decompose_results key you wrote,
+     When done, reply with: the _comprehend_results key you wrote,
      how many errors found, and one sentence summarizing the most severe.")
 
 Task(prompt="Use REPL at REPL_ADDR. Analyze this log segment for errors.
-     Store in _decompose_results['log_segment_hours_12_to_18'] as a dict with
+     Store in _comprehend_results['log_segment_hours_12_to_18'] as a dict with
      keys 'error_summary' and 'critical_error_list'.
      Segment: <chunk3>
 
-     When done, reply with: the _decompose_results key you wrote,
+     When done, reply with: the _comprehend_results key you wrote,
      how many errors found, and one sentence summarizing the most severe.")
 ```
 
@@ -296,7 +296,7 @@ Task(prompt="Use REPL at REPL_ADDR. Analyze this log segment for errors.
 **Parent reads accumulated results:**
 ```bash
 python3 SCRIPTS/repl_client.py REPL_ADDR '
-for segment_key, segment_data in sorted(_decompose_results.items()):
+for segment_key, segment_data in sorted(_comprehend_results.items()):
     if segment_key.startswith("log_segment_"):
         print(f"{segment_key}: {segment_data[\"error_summary\"]}")
         for critical_error in segment_data.get("critical_error_list", []):
@@ -317,7 +317,7 @@ python3 SCRIPTS/chunk_text.py chunk large_file.txt --size 80000 --overlap 200  #
 For structured files (code, markdown), prefer splitting at functions, classes,
 or section headers rather than arbitrary character boundaries.
 
-## When NOT to Decompose
+## When NOT to Comprehend
 
 - **< 50KB total** — Read into REPL variables directly. No subagents needed.
 - **Global questions** — "What is the overall theme?" needs the full picture.
@@ -326,6 +326,6 @@ or section headers rather than arbitrary character boundaries.
 
 ## References
 
-- `references/decomposition-patterns.md` — Five worked examples.
+- `references/comprehension-patterns.md` — Five worked examples.
 - `references/mapping-table.md` — RLM primitive to agent tool mapping.
 - `references/rlm-system-prompt.md` — Theoretical foundation.

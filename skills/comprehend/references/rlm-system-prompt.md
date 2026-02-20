@@ -2,7 +2,7 @@
 
 This is the complete system prompt from the Recursive Language Model framework
 (MIT OASYS lab, arXiv:2512.24601), reformatted for readability with annotations
-explaining how each concept maps to the decompose skill's tool ecosystem.
+explaining how each concept maps to the comprehend skill's tool ecosystem.
 
 ## Original Prompt (Annotated)
 
@@ -74,7 +74,7 @@ This is the heart of the RLM approach. The key insight is "as if you were
 building an agent" — the LLM writes a program that orchestrates other LLM
 calls, rather than trying to solve everything in one pass.
 
-With the persistent REPL, this translates naturally: plan the decomposition
+With the persistent REPL, this translates naturally: plan the comprehension
 strategy, then execute it using Task calls for LLM reasoning and the REPL for
 all computation, storage, and aggregation. The REPL is the connective tissue.
 
@@ -143,7 +143,7 @@ if "up" in trend.lower():
 Launch a Task, inspect its result (or the REPL variable it wrote to),
 conditionally launch more Tasks based on what was found.
 
-**5. Adaptive decomposition** — try simple first, escalate if needed:
+**5. Adaptive comprehension** — try simple first, escalate if needed:
 ```python
 r = rlm_query("Prove sqrt 2 irrational. Or reply: USE_LEMMA or USE_CONTRADICTION.")
 if "USE_LEMMA" in r.upper():

@@ -57,13 +57,13 @@ _SAFE_BUILTINS = {
 }
 
 
-_RESERVED_VARS = {"_decompose_results"}
+_RESERVED_VARS = {"_comprehend_results"}
 
 
 class PersistentREPL:
     def __init__(self):
         self.globals = {"__builtins__": _SAFE_BUILTINS.copy(), "__name__": "__main__"}
-        self.user_locals = {"_decompose_results": {}}
+        self.user_locals = {"_comprehend_results": {}}
         self._lock = threading.Lock()
 
     def execute(self, code):
@@ -164,7 +164,7 @@ def create_server(addr_path):
 def make_addr():
     """Generate a unique address path for this session."""
     suffix = '.sock' if _HAS_UNIX else '.addr'
-    name = f'decompose_{uuid.uuid4().hex[:12]}{suffix}'
+    name = f'comprehend_{uuid.uuid4().hex[:12]}{suffix}'
     return os.path.join(tempfile.gettempdir(), name)
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Text chunking utility for RLM-style context decomposition.
+"""Text chunking utility for RLM-style context comprehension.
 
 Usage:
     chunk_text.py info <file>                        Print context assessment as JSON
