@@ -82,12 +82,27 @@ python3 SCRIPTS/repl_client.py REPL_ADDR 'print(greeting_message)'
 python3 SCRIPTS/repl_client.py REPL_ADDR --vars
 ```
 
+For multi-line code or code containing single quotes (e.g., dict keys
+inside f-strings), use a heredoc to pipe code through stdin:
+
+```bash
+python3 SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
+for key, val in data.items():
+    print(f"  {key}: {val['count']} items")
+PYEOF
+```
+
+The quoted delimiter (`<<'PYEOF'`) passes all characters through to
+Python unchanged — single quotes, double quotes, backslashes, everything.
+One-liners with only double-quoted strings work fine as positional args.
+Anything else should use a heredoc.
+
 **Use the REPL for everything.** Finding files, searching content, reading
 source, storing results — all of it. Every fact you discover goes into a
 variable where it accumulates instead of evaporating.
 
 ```bash
-python3 SCRIPTS/repl_client.py REPL_ADDR '
+python3 SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
 import glob, os, re
 
 # Find files (instead of Glob tool)
@@ -111,7 +126,7 @@ for filepath in project_source_files:
 # total_source_bytes, function_definition_matches
 print(f"{len(project_source_files)} files, {total_source_bytes/1024:.0f} KB, "
       f"{len(function_definition_matches)} files with matches")
-'
+PYEOF
 ```
 
 ## The Results Dict
@@ -123,9 +138,9 @@ re-initialize it — that would wipe results from other subagents. Just
 write to it:
 
 ```bash
-python3 SCRIPTS/repl_client.py REPL_ADDR '
+python3 SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
 _comprehend_results["auth_module_analysis"] = {"functions": [...], "issues": [...]}
-'
+PYEOF
 ```
 
 **The parent assigns every subagent a unique key** before launching it.
@@ -137,13 +152,13 @@ Keys should be descriptive: `'auth_module_function_signatures'`, not
 `'chunk1'`. For deeper nesting, use sub-keys within the assigned key:
 
 ```bash
-python3 SCRIPTS/repl_client.py REPL_ADDR '
+python3 SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
 _comprehend_results["auth_module"] = {
     "function_signatures": [...],
     "import_map": {...},
     "issues": [...]
 }
-'
+PYEOF
 ```
 
 The parent reads from `_comprehend_results[key]`. The underscore prefix
@@ -202,10 +217,10 @@ for actual work — edits, debugging, new features — rather than filled
 with source code you've already analyzed.
 
 ```bash
-python3 SCRIPTS/repl_client.py REPL_ADDR '
+python3 SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
 # Answer a specific question without re-reading any files
 print(_comprehend_results["core_library"]["design_patterns"])
-'
+PYEOF
 ```
 
 The REPL is not just a tool for the comprehension phase — it is the
@@ -279,11 +294,11 @@ models.py, unused import in tokens.py)."
 
 **Parent reads back:**
 ```bash
-python3 SCRIPTS/repl_client.py REPL_ADDR '
+python3 SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
 auth_data = _comprehend_results["auth_module_analysis"]
 print("Functions:", auth_data["function_signatures"])
 print("Concerns:", auth_data["identified_concerns"])
-'
+PYEOF
 ```
 
 ### Batched Parallel Query
@@ -322,13 +337,13 @@ Task(prompt="Use REPL at REPL_ADDR. Analyze this log segment for errors.
 
 **Parent reads accumulated results:**
 ```bash
-python3 SCRIPTS/repl_client.py REPL_ADDR '
+python3 SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
 for segment_key, segment_data in sorted(_comprehend_results.items()):
     if segment_key.startswith("log_segment_"):
         print(f"{segment_key}: {segment_data['error_summary']}")
         for critical_error in segment_data.get('critical_error_list', []):
             print(f"  - {critical_error}")
-'
+PYEOF
 ```
 
 ## Chunking

@@ -25,11 +25,11 @@ fan out in parallel, aggregate error summaries via the REPL.
    REPL_ADDR=$(python3 scripts/repl_server.py --make-addr)
    python3 scripts/repl_server.py "$REPL_ADDR" &
 
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    with open("server.log") as f:
        first_lines = [next(f) for _ in range(5)]
        print("First lines:", first_lines)
-   '
+   PYEOF
    ```
 
 2. Chunk into manageable pieces (~100K chars each):
@@ -48,7 +48,7 @@ fan out in parallel, aggregate error summaries via the REPL.
 
 4. Aggregate from the REPL:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    all_errors = []
    for chunk_id, chunk_errors in errors.items():
        all_errors.extend(chunk_errors)
@@ -57,7 +57,7 @@ fan out in parallel, aggregate error summaries via the REPL.
        by_type.setdefault(e["error_type"], []).append(e)
    for t, errs in sorted(by_type.items(), key=lambda x: -len(x[1])):
        print(f"{t}: {len(errs)} occurrences")
-   '
+   PYEOF
    ```
 
 **Key insight:** Log files have temporal structure. Exploit it for chunking
@@ -73,13 +73,13 @@ potential bugs."
 
 **Assessment:**
 ```bash
-python3 scripts/repl_client.py REPL_ADDR '
+python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
 import glob, os
 source_files = glob.glob("src/**/*.py", recursive=True)
 file_sizes = {f: os.path.getsize(f) for f in source_files}
 total = sum(file_sizes.values())
 print(f"{len(source_files)} files, {total} bytes ({total/1024:.0f} KB)")
-'
+PYEOF
 ```
 
 400KB total, multi-file. No single file exceeds 100KB.
@@ -91,7 +91,7 @@ in the REPL for cross-module aggregation.
 
 1. Group files by directory in the REPL:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    from collections import defaultdict
    groups = defaultdict(list)
    for f in source_files:
@@ -100,7 +100,7 @@ in the REPL for cross-module aggregation.
    for module, files in groups.items():
        size = sum(file_sizes[f] for f in files)
        print(f"{module}: {len(files)} files, {size/1024:.0f} KB")
-   '
+   PYEOF
    ```
 
 2. Fan out parallel Task calls, one per module group:
@@ -113,7 +113,7 @@ in the REPL for cross-module aggregation.
 
 3. Aggregate from the REPL:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    all_findings = []
    for module, findings in reviews.items():
        all_findings.extend(findings)
@@ -122,7 +122,7 @@ in the REPL for cross-module aggregation.
        print(f"\n{severity.upper()} ({len(items)}):")
        for item in items:
            print(f"  {item['file']}:{item['line']} — {item['description']}")
-   '
+   PYEOF
    ```
 
 **Key insight:** For multi-file analysis, group by module rather than
@@ -167,10 +167,10 @@ All results flow through the REPL.
 
 3. Collect Phase 1 results. Store relevance flags in the REPL:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    relevant_sections = [s for s, flag in section_flags.items() if flag == "YES"]
    print(f"{len(relevant_sections)} of {len(section_flags)} sections are relevant")
-   '
+   PYEOF
    ```
 
 4. Phase 2 — deep analysis of relevant sections only:
@@ -197,13 +197,13 @@ and asks "What data was lost or changed in the migration?"
 
 **Assessment:**
 ```bash
-python3 scripts/repl_client.py REPL_ADDR '
+python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
 import os
 before_size = os.path.getsize("before.csv")
 after_size = os.path.getsize("after.csv")
 print(f"before.csv: {before_size/1024/1024:.1f} MB")
 print(f"after.csv: {after_size/1024/1024:.1f} MB")
-'
+PYEOF
 ```
 
 Two parallel contexts, each ~2MB. Too large to diff in memory directly.
@@ -215,7 +215,7 @@ compare pairwise, aggregate differences in the REPL.
 
 1. Examine structure in the REPL:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    with open("before.csv") as f:
        header = f.readline().strip()
        row_count_before = sum(1 for _ in f)
@@ -224,7 +224,7 @@ compare pairwise, aggregate differences in the REPL.
        row_count_after = sum(1 for _ in f)
    print(f"Header: {header}")
    print(f"Rows: before={row_count_before}, after={row_count_after}")
-   '
+   PYEOF
    ```
 
 2. Chunk both files into matching row ranges:
@@ -242,12 +242,12 @@ compare pairwise, aggregate differences in the REPL.
 
 4. Aggregate from the REPL:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    total_lost = sum(len(d["lost_rows"]) for d in diffs.values())
    total_changed = sum(len(d["changed_rows"]) for d in diffs.values())
    total_added = sum(len(d["added_rows"]) for d in diffs.values())
    print(f"Lost: {total_lost}, Changed: {total_changed}, Added: {total_added}")
-   '
+   PYEOF
    ```
 
 **Key insight:** For comparison tasks, chunk both inputs in parallel and
@@ -263,12 +263,12 @@ to the database, identifying all validation steps along the way."
 
 **Assessment:**
 ```bash
-python3 scripts/repl_client.py REPL_ADDR '
+python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
 import glob, os
 py_files = glob.glob("src/**/*.py", recursive=True)
 total = sum(os.path.getsize(f) for f in py_files)
 print(f"{len(py_files)} files, {total/1024:.0f} KB")
-'
+PYEOF
 ```
 
 620KB across 45 files. The question requires understanding call chains
@@ -298,12 +298,12 @@ Phase 3: Synthesize the trace from REPL state.
 
 2. Read the architecture map from the REPL and identify the call chain:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    for layer, funcs in arch.items():
        print(f"\n{layer}:")
        for name, info in funcs.items():
            print(f"  {name}: {info.get('summary', '')}")
-   '
+   PYEOF
    ```
 
 3. Phase 2 — Targeted trace using the architecture map:
@@ -318,12 +318,12 @@ Phase 3: Synthesize the trace from REPL state.
 
 4. Phase 3 — Read trace from REPL and synthesize for the user:
    ```bash
-   python3 scripts/repl_client.py REPL_ADDR '
+   python3 scripts/repl_client.py REPL_ADDR <<'PYEOF'
    for i, step in enumerate(trace_result, 1):
        checks = ", ".join(step.get("validation_checks", []))
        print(f"{i}. {step['file']}:{step['function']} — {step['action']}")
        if checks: print(f"   Validates: {checks}")
-   '
+   PYEOF
    ```
 
 **Key insight:** Cross-file reasoning requires a map-then-trace approach,
