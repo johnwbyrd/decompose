@@ -1,5 +1,5 @@
 ---
-name: rlm-decomposition
+name: decomposition
 description: This skill should be used when the user asks to "analyze a large file", "process multiple files", "decompose this problem", "chunk and analyze", "fan out analysis", "recursive analysis", "analyze this codebase", or when the task involves processing context that exceeds what can be reasoned about in a single pass. Also activate when encountering any input larger than ~50KB that requires detailed analysis, or when the user mentions "context decomposition" or "recursive decomposition".
 version: 0.1.1
 ---

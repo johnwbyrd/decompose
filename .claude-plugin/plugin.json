@@ -1,8 +1,0 @@
-{
-  "name": "claude-rlm",
-  "description": "Recursive Language Model decomposition patterns for handling large contexts and complex multi-step analysis tasks.",
-  "version": "0.1.0",
-  "author": {
-    "name": "jbyrd"
-  }
-}

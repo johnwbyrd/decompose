@@ -1,6 +1,6 @@
-# claude-rlm
+# claude-decomposition
 
-A Claude Code plugin for systematic context decomposition. Inspired by the
+A Claude Code skill for systematic context decomposition. Inspired by the
 [RLM framework](https://github.com/alexzhang13/rlm) from MIT OASYS lab
 ([paper](https://arxiv.org/abs/2512.24601),
 [blog](https://alexzhang13.github.io/blog/2025/rlm/)).
@@ -19,11 +19,29 @@ skill provides:
 
 ## Installation
 
+### Local install (single project)
+
+Copy the skill into your project's `.claude/skills/` directory:
+
 ```bash
-claude --plugin-dir ~/git/claude-rlm/
+git clone https://github.com/johnwbyrd/claude-decomposition.git
+mkdir -p .claude/skills
+cp -r claude-decomposition/.claude/skills/decomposition .claude/skills/
 ```
 
-Or symlink into your plugins directory for persistent use.
+Claude Code auto-discovers skills at `.claude/skills/*/SKILL.md`. Commit
+the directory to version control to share it with your team.
+
+### Global install (all projects)
+
+Copy the skill into your personal Claude Code skills directory so it's
+available in every project:
+
+```bash
+git clone https://github.com/johnwbyrd/claude-decomposition.git
+mkdir -p ~/.claude/skills
+cp -r claude-decomposition/.claude/skills/decomposition ~/.claude/skills/
+```
 
 ## Usage
 
@@ -43,9 +61,9 @@ analysis tasks. Trigger phrases include:
 Deterministic text chunking:
 
 ```bash
-python3 skills/rlm-decomposition/scripts/chunk_text.py info large_file.txt
-python3 skills/rlm-decomposition/scripts/chunk_text.py chunk large_file.txt --size 80000
-python3 skills/rlm-decomposition/scripts/chunk_text.py boundaries source.py
+python3 .claude/skills/decomposition/scripts/chunk_text.py info large_file.txt
+python3 .claude/skills/decomposition/scripts/chunk_text.py chunk large_file.txt --size 80000
+python3 .claude/skills/decomposition/scripts/chunk_text.py boundaries source.py
 ```
 
 ### repl_server.py / repl_client.py
@@ -55,17 +73,17 @@ function definitions survive across Bash calls:
 
 ```bash
 # Start the server
-python3 skills/rlm-decomposition/scripts/repl_server.py /tmp/repl.sock &
+python3 .claude/skills/decomposition/scripts/repl_server.py /tmp/repl.sock &
 
 # Execute code (state persists between calls)
-python3 skills/rlm-decomposition/scripts/repl_client.py /tmp/repl.sock 'x = 42'
-python3 skills/rlm-decomposition/scripts/repl_client.py /tmp/repl.sock 'print(x + 1)'
+python3 .claude/skills/decomposition/scripts/repl_client.py /tmp/repl.sock 'x = 42'
+python3 .claude/skills/decomposition/scripts/repl_client.py /tmp/repl.sock 'print(x + 1)'
 
 # Inspect variables
-python3 skills/rlm-decomposition/scripts/repl_client.py /tmp/repl.sock --vars
+python3 .claude/skills/decomposition/scripts/repl_client.py /tmp/repl.sock --vars
 
 # Shut down
-python3 scripts/repl_client.py /tmp/repl.sock --shutdown
+python3 .claude/skills/decomposition/scripts/repl_client.py /tmp/repl.sock --shutdown
 ```
 
 All scripts are pure Python 3, no external dependencies.
