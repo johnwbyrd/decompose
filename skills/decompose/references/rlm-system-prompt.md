@@ -2,7 +2,7 @@
 
 This is the complete system prompt from the Recursive Language Model framework
 (MIT OASYS lab, arXiv:2512.24601), reformatted for readability with annotations
-explaining how each concept maps to Claude Code's tool ecosystem.
+explaining how each concept maps to the decompose skill's tool ecosystem.
 
 ## Original Prompt (Annotated)
 
@@ -13,10 +13,10 @@ explaining how each concept maps to Claude Code's tool ecosystem.
 > can recursively query sub-LLMs, which you are strongly encouraged to use as
 > much as possible. You will be queried iteratively until you provide a final answer.
 
-**Claude Code mapping:** The "REPL environment" maps to the Bash tool running
-Python. "Recursively query sub-LLMs" maps to the Task tool spawning subagents.
-"Queried iteratively" maps to Claude Code's natural agentic loop — it already
-iterates until the task is complete.
+**Mapping:** The "REPL environment" maps directly to the persistent REPL server
+(`scripts/repl_server.py`). "Recursively query sub-LLMs" maps to the Task tool
+spawning subagents. "Queried iteratively" maps to the agent's natural agentic
+loop — it already iterates until the task is complete.
 
 ### The REPL Environment
 
@@ -35,17 +35,17 @@ iterates until the task is complete.
 > 6. A `SHOW_VARS()` function that returns all variables created in the REPL.
 > 7. The ability to use `print()` statements to view output.
 
-**Claude Code mapping:**
+**Mapping:**
 
-| RLM | Claude Code |
+| RLM | Agent Equivalent |
 |:----|:------------|
-| `context` | Files on disk, accessed via `Read` |
+| `context` | REPL variables — load files into the persistent REPL where they accumulate |
 | `llm_query()` | `Task` with lightweight subagent |
 | `llm_query_batched()` | Multiple parallel `Task` calls |
 | `rlm_query()` | `Task` with general-purpose subagent |
 | `rlm_query_batched()` | Multiple parallel general-purpose `Task` calls |
-| `SHOW_VARS()` | No equivalent needed — state lives in files and conversation |
-| `print()` | Direct text output |
+| `SHOW_VARS()` | `python3 scripts/repl_client.py /tmp/repl.sock --vars` |
+| `print()` | Direct text output, or `print()` in the persistent REPL |
 
 ### Decision: When to Use Which Primitive
 
@@ -56,9 +56,10 @@ iterates until the task is complete.
 >   reasoning, solving a sub-problem that needs its own REPL and iteration, or
 >   tasks where a single LLM call might not be enough.
 
-**Claude Code mapping:** This distinction maps directly to subagent types.
-Use `Explore` or `haiku` for lightweight queries. Use `general-purpose` for
-sub-problems that need their own tool access and multi-step reasoning.
+**Mapping:** This distinction maps directly to subagent types. Use `Explore`
+or `haiku` for lightweight queries. Use `general-purpose` for sub-problems
+that need their own tool access and multi-step reasoning. Both types can
+share the persistent REPL for storing and retrieving state.
 
 ### The Core Decomposition Principle
 
@@ -73,9 +74,9 @@ This is the heart of the RLM approach. The key insight is "as if you were
 building an agent" — the LLM writes a program that orchestrates other LLM
 calls, rather than trying to solve everything in one pass.
 
-In Claude Code, this translates to: plan the decomposition strategy explicitly,
-then execute it using Task calls, Bash for computation, and the agentic loop
-for iteration.
+With the persistent REPL, this translates naturally: plan the decomposition
+strategy, then execute it using Task calls for LLM reasoning and the REPL for
+all computation, storage, and aggregation. The REPL is the connective tissue.
 
 ### Computation in Code
 
@@ -83,8 +84,9 @@ for iteration.
 > steps (e.g. `math.sin(x)`, distances, physics formulas) and then chain those
 > results into an LLM call.
 
-**Claude Code mapping:** Use Bash to run Python for any computation that
-should be deterministic rather than approximated by the LLM.
+**Mapping:** Use the persistent REPL for any computation that should be
+deterministic rather than approximated by the LLM. Results persist in
+variables and can be fed into subsequent Task calls.
 
 ### Context Exploration
 
@@ -94,10 +96,10 @@ should be deterministic rather than approximated by the LLM.
 > smart chunks, query an LLM per chunk and save answers to a buffer, then
 > query an LLM over the buffers to produce your final answer.
 
-This is the assessment-first protocol. In Claude Code: measure file sizes,
+This is the assessment-first protocol. Measure file sizes in the REPL,
 determine structure, choose a chunking strategy based on what the measurement
 reveals, then execute. The `scripts/chunk_text.py` utility handles the
-mechanical chunking.
+mechanical chunking. The REPL stores the buffers that accumulate across chunks.
 
 ### Worked Examples from the Original Prompt
 
@@ -109,7 +111,8 @@ chunk = context[:10000]
 answer = llm_query(f"What is the magic number? Chunk: {chunk}")
 ```
 
-In Claude Code: Read a section of the file, pass it to a Task subagent.
+With the persistent REPL: load the file into a REPL variable, slice it, pass
+the chunk to a Task subagent, store the answer back in the REPL.
 
 **2. Iterative book analysis** — process sections sequentially, accumulate:
 ```python
@@ -117,8 +120,8 @@ for i, section in enumerate(context):
     buffer = llm_query(f"Section {i}: gather info for {query}. Section: {section}")
 ```
 
-In Claude Code: Read sections sequentially, launch Task per section, accumulate
-results in the conversation.
+With the persistent REPL: iterate sections in REPL code, launch a Task per
+section, accumulate results in a REPL dict that grows across iterations.
 
 **3. Batched fan-out** — chunk context, query all chunks in parallel:
 ```python
@@ -127,7 +130,8 @@ answers = llm_query_batched(prompts)
 final = llm_query(f"Aggregate: {answers}")
 ```
 
-In Claude Code: Issue multiple parallel Task calls, then synthesize results.
+Issue multiple parallel Task calls, each writing to a named REPL variable,
+then synthesize from the accumulated REPL state.
 
 **4. Recursive reasoning with branching** — try one approach, branch on result:
 ```python
@@ -136,8 +140,8 @@ if "up" in trend.lower():
     recommendation = "Increase exposure."
 ```
 
-In Claude Code: Launch a Task, inspect its result, conditionally launch more
-Tasks based on what was returned.
+Launch a Task, inspect its result (or the REPL variable it wrote to),
+conditionally launch more Tasks based on what was found.
 
 **5. Adaptive decomposition** — try simple first, escalate if needed:
 ```python
@@ -146,8 +150,9 @@ if "USE_LEMMA" in r.upper():
     final = rlm_query("Prove n^2 even => n even, then use it.")
 ```
 
-In Claude Code: Launch a Task with an open-ended prompt, inspect the result,
-and adapt the strategy based on what the subagent returns.
+Launch a Task with an open-ended prompt, inspect the result, and adapt the
+strategy based on what the subagent returns. The REPL stores intermediate
+state so adaptive strategies can build on prior work.
 
 ### Final Answer Protocol
 
@@ -155,14 +160,12 @@ and adapt the strategy based on what the subagent returns.
 > 1. Use FINAL(your final answer here) to provide the answer directly
 > 2. Use FINAL_VAR(variable_name) to return a variable from the REPL
 
-**Claude Code mapping:** No special directive needed. Present the synthesized
-answer directly to the user in the conversation. The agentic loop ends when
-the response is complete.
+**Mapping:** Present the synthesized answer directly to the user. If the
+final answer is stored in a REPL variable, read it out first:
+`python3 scripts/repl_client.py /tmp/repl.sock 'print(final_answer)'`
 
 ## Source
 
-The original system prompt is at:
-`/home/jbyrd/git/rlm/rlm/utils/prompts.py`, lines 8-115
-
 The RLM paper: arXiv:2512.24601 (December 2025)
 Blog: https://alexzhang13.github.io/blog/2025/rlm/
+Repository: https://github.com/alexzhang13/rlm
