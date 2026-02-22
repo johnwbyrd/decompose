@@ -7,6 +7,7 @@ Unix domain sockets (Windows), reads the TCP address from the given path.
 Usage:
     echo 'x = 42' | repl_client.py <address_path>
     repl_client.py <address_path> 'print(x + 1)'
+    repl_client.py <address_path> --file <path>
     repl_client.py <address_path> --vars
     repl_client.py <address_path> --shutdown
 
@@ -66,6 +67,9 @@ def main():
         msg = {"command": "show_vars"}
     elif len(sys.argv) > 2 and sys.argv[2] == "--shutdown":
         msg = {"command": "shutdown"}
+    elif len(sys.argv) > 3 and sys.argv[2] == "--file":
+        with open(sys.argv[3]) as f:
+            msg = {"code": f.read()}
     elif len(sys.argv) > 2:
         msg = {"code": " ".join(sys.argv[2:])}
     else:

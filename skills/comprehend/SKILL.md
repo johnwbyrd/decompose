@@ -14,6 +14,12 @@ small.
 
 That is the entire method. What follows is how to do it.
 
+**Cost warning:** This skill uses more tokens and time than a quick
+Explore search. It launches subagents, runs a REPL server, and
+accumulates structured results — all of which cost tokens. The payoff
+is deeper understanding and persistent queryable knowledge. For quick
+lookups (find a file, locate a function), use Explore instead.
+
 **Priority:** For any project-wide or codebase-wide analysis — "analyze this
 project", "survey this code", "study the repo", "read all the files",
 "understand this codebase", "review this repo", "explore this project",
@@ -86,7 +92,8 @@ persistent, queryable knowledge base for the rest of the conversation.
 
 **Always use a heredoc to send code to the REPL.** Never pass code as a
 positional command-line argument — it will break on quotes, braces, or
-multi-line input. The only exceptions are `--vars` and `--shutdown`.
+multi-line input. The only exceptions are `--vars`, `--shutdown`, and
+`--file`.
 
 ```bash
 # Run code (state persists between calls)
@@ -104,7 +111,23 @@ python SCRIPTS/repl_client.py REPL_ADDR --vars
 
 The quoted delimiter (`<<'PYEOF'`) passes all characters through to
 Python unchanged — single quotes, double quotes, backslashes, parentheses,
-braces, everything. This is the only safe way to send code to the REPL.
+braces, everything.
+
+**Large results:** Heredocs can break on very large blocks of code
+(100+ lines). When storing large data in `_comprehend_results`, use the
+Write tool to write the Python code to a temporary file, then use
+`--file`:
+
+```bash
+# First: use the Write tool to create /tmp/comprehend_data.py
+# with the Python code (assignments, dict literals, etc.)
+# Then:
+python SCRIPTS/repl_client.py REPL_ADDR --file /tmp/comprehend_data.py
+```
+
+This bypasses shell quoting entirely. The Write tool writes the file
+directly, and `--file` reads it directly. Use this for any REPL code
+that is too large for a heredoc.
 
 **Windows paths in heredocs:** Always use forward slashes in Python code
 inside heredocs (`"C:/Users/..."` not `"C:\\Users\\..."`). Python accepts
