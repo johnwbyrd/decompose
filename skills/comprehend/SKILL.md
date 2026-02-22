@@ -24,6 +24,19 @@ requires the measure-first workflow, persistent REPL, and fan-out patterns
 described here; Explore subagents will exhaust context or miss cross-file
 relationships.
 
+## Prerequisites
+
+This skill requires **python** and **nohup**. Before doing anything else,
+verify they are available:
+
+```bash
+python --version && nohup --version > /dev/null 2>&1 && echo "ok"
+```
+
+If this does not print `ok`, **stop here**. Tell the user which command
+is missing. On Windows, both are available in Git Bash. On macOS and
+Linux, both are standard.
+
 ## Script Paths
 
 This skill bundles scripts in its `scripts/` directory. Before using them,
@@ -44,11 +57,15 @@ launching the server:
 # Generate a session-unique address (prevents collisions between
 # simultaneous sessions on the same machine)
 REPL_ADDR=$(python SCRIPTS/repl_server.py --make-addr)
-python SCRIPTS/repl_server.py "$REPL_ADDR" &
+nohup python SCRIPTS/repl_server.py "$REPL_ADDR" > /dev/null 2>&1 &
 ```
 
-On Windows, the server automatically uses TCP on localhost instead of
-Unix sockets. No code changes needed — the interface is identical.
+The server must outlive the shell that starts it. Use `nohup` and shell
+backgrounding (`&`) as shown above. Do **not** use the Bash tool's
+`run_in_background` parameter — it may kill the server when the task
+"completes." On Windows, the server automatically uses TCP on localhost
+instead of Unix sockets. No code changes needed — the interface is
+identical.
 
 Throughout this document, `REPL_ADDR` refers to the session-unique
 address returned by `--make-addr`. In all bash commands, substitute the

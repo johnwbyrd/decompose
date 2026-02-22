@@ -23,7 +23,7 @@ fan out in parallel, aggregate error summaries via the REPL.
 1. Generate a session-unique address, start the REPL, and examine log structure:
    ```bash
    REPL_ADDR=$(python scripts/repl_server.py --make-addr)
-   python scripts/repl_server.py "$REPL_ADDR" &
+   nohup python scripts/repl_server.py "$REPL_ADDR" > /dev/null 2>&1 &
 
    python scripts/repl_client.py REPL_ADDR <<'PYEOF'
    with open("server.log") as f:
