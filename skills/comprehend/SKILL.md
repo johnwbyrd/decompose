@@ -84,29 +84,27 @@ files. Every answer costs one small Bash call instead of consuming context
 window. The REPL turns comprehension from a one-shot summary into a
 persistent, queryable knowledge base for the rest of the conversation.
 
+**Always use a heredoc to send code to the REPL.** Never pass code as a
+positional command-line argument — it will break on quotes, braces, or
+multi-line input. The only exceptions are `--vars` and `--shutdown`.
+
 ```bash
 # Run code (state persists between calls)
-python SCRIPTS/repl_client.py REPL_ADDR 'greeting_message = "hello"'
-python SCRIPTS/repl_client.py REPL_ADDR 'print(greeting_message)'
+python SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
+greeting_message = "hello"
+PYEOF
+
+python SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
+print(greeting_message)
+PYEOF
 
 # See all stored variables
 python SCRIPTS/repl_client.py REPL_ADDR --vars
 ```
 
-For multi-line code or code containing single quotes (e.g., dict keys
-inside f-strings), use a heredoc to pipe code through stdin:
-
-```bash
-python SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
-for key, val in data.items():
-    print(f"  {key}: {val['count']} items")
-PYEOF
-```
-
 The quoted delimiter (`<<'PYEOF'`) passes all characters through to
-Python unchanged — single quotes, double quotes, backslashes, everything.
-One-liners with only double-quoted strings work fine as positional args.
-Anything else should use a heredoc.
+Python unchanged — single quotes, double quotes, backslashes, parentheses,
+braces, everything. This is the only safe way to send code to the REPL.
 
 **Windows paths in heredocs:** Always use forward slashes in Python code
 inside heredocs (`"C:/Users/..."` not `"C:\\Users\\..."`). Python accepts
@@ -241,6 +239,19 @@ PYEOF
 
 The REPL is not just a tool for the comprehension phase — it is the
 *product* of the comprehension phase.
+
+### 7. Shut down the REPL
+
+When the user's comprehension questions are answered and the conversation
+moves on to other work (editing, debugging, new features), shut down the
+REPL:
+
+```bash
+python SCRIPTS/repl_client.py REPL_ADDR --shutdown
+```
+
+The `nohup` server runs until explicitly stopped. Shut it down when
+comprehension is complete to avoid leaving an orphan process.
 
 ### The 50KB Rule
 

@@ -79,7 +79,7 @@ python .claude/skills/comprehend/scripts/chunk_text.py boundaries source.py
 **repl_server.py / repl_client.py** — Persistent Python REPL over Unix socket (TCP on Windows):
 ```bash
 REPL_ADDR=$(python .claude/skills/comprehend/scripts/repl_server.py --make-addr)
-python .claude/skills/comprehend/scripts/repl_server.py "$REPL_ADDR" &
+nohup python .claude/skills/comprehend/scripts/repl_server.py "$REPL_ADDR" > /dev/null 2>&1 &
 
 python .claude/skills/comprehend/scripts/repl_client.py "$REPL_ADDR" 'x = 42'
 python .claude/skills/comprehend/scripts/repl_client.py "$REPL_ADDR" 'print(x + 1)'  # 43
