@@ -1,34 +1,40 @@
 ---
 name: comprehend
-description: Use this skill whenever the user asks to analyze, understand, or survey an entire project, codebase, or any collection of files. Trigger phrases include "analyze a large file", "process multiple files", "comprehend this problem", "take a look at these files", "familiarize yourself with this project", or any similar request, however phrased. Also activate when the task involves processing context that exceeds what can be reasoned about in a single pass, when encountering any input larger than ~50KB that requires detailed analysis, or when the user mentions "context comprehension" or "recursive comprehension". This skill TAKES PRIORITY over your default explore subagents for any project-wide or codebase-wide analysis task.
+description: A methodology for working effectively in unfamiliar codebases. Use this skill whenever you need to fix a bug, add a feature, refactor, or make any non-trivial change in code you haven't seen before. It prevents the most common failure mode — diving into edits before understanding the code — by enforcing a measure-first workflow with persistent state and parallel readers.
 license: AGPL-3.0
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Comprehend
 
-Break large problems into pieces. Use a persistent REPL to store everything
+You are working in an unfamiliar codebase. Before you touch anything,
+understand what you're dealing with.
+
+Break the problem into pieces. Use a persistent REPL to store everything
 you learn. Fan out subagents to do the reading. Keep your own context window
-small.
+small and available for the actual work — edits, debugging, reasoning.
 
 That is the entire method. What follows is how to do it.
 
-**Cost warning:** This skill uses more tokens and time than a quick
-Explore search. It launches subagents, runs a REPL server, and
-accumulates structured results — all of which cost tokens. The payoff
-is deeper understanding and persistent queryable knowledge. For quick
-lookups (find a file, locate a function), use Explore instead.
+## When to Use This
 
-**Priority:** For any project-wide or codebase-wide analysis — "analyze this
-project", "survey this code", "study the repo", "read all the files",
-"understand this codebase", "review this repo", "explore this project",
-"map out the code", and similar requests — use this skill instead of
-launching Explore subagents. Explore subagents are designed for quick,
-targeted searches (find a file, locate a function). Whole-project analysis
-requires the measure-first workflow, persistent REPL, and fan-out patterns
-described here; Explore subagents will exhaust context or miss cross-file
-relationships.
+Use this workflow whenever you are making changes in code you don't already
+understand. This includes:
+
+- Fixing a bug in a repository you haven't seen before
+- Adding a feature that touches multiple files or modules
+- Refactoring code whose structure you need to map out first
+- Any task where you'd otherwise spend your first several turns just reading
+
+The default instinct is to start reading files immediately and jump to a fix.
+That works for trivial changes. For anything else, it leads to patches that
+miss edge cases, break related code, or over-engineer because you didn't
+see the simpler path. Measure first.
+
+**Skip this workflow only when** the change is truly trivial — a one-line
+typo fix, a config value change, something where understanding the
+surrounding code is unnecessary.
 
 ## Prerequisites
 
@@ -56,8 +62,7 @@ bash commands, substitute the actual absolute path.
 
 ## The REPL
 
-Every comprehension session starts by generating a unique address and
-launching the server:
+Every session starts by generating a unique address and launching the server:
 
 ```bash
 # Generate a session-unique address (prevents collisions between
@@ -78,17 +83,17 @@ address returned by `--make-addr`. In all bash commands, substitute the
 actual path. **Each session must use its own address.**
 
 This launches a persistent Python REPL. Variables, imports, and definitions
-survive across calls -- not just during comprehension, but for the entire
+survive across calls — not just during comprehension, but for the entire
 session. The REPL is your memory: use it instead of reading files into
 your context window.
 
-**This is the key tradeoff.** The upfront cost is ceremony — launching a
-server, passing addresses, writing structured results. The payoff comes
-later: when the user asks follow-up questions about the code, you can
-query `_comprehend_results` from the REPL instead of re-reading source
-files. Every answer costs one small Bash call instead of consuming context
-window. The REPL turns comprehension from a one-shot summary into a
-persistent, queryable knowledge base for the rest of the conversation.
+**This is the key tradeoff.** The upfront cost is a few extra turns to
+launch the server and measure the codebase. The payoff: you build a
+queryable knowledge base that persists for the entire session. When you
+need to check something later — while debugging, while writing tests,
+while responding to follow-up questions — you query the REPL instead of
+re-reading source files. Every lookup costs one small Bash call instead
+of consuming context window.
 
 **Always use a heredoc to send code to the REPL.** Never pass code as a
 positional command-line argument — it will break on quotes, braces, or
@@ -216,14 +221,14 @@ and specific name avoid collisions with user or project variables.
 
 ### 1. Measure
 
-Before reading any files, measure everything you intend to read. Use the
+Before reading any files, measure everything relevant to your task. Use the
 REPL (as above) or the bundled script:
 
 ```bash
 python SCRIPTS/chunk_text.py info <file>
 ```
 
-Measure ALL files — source, tests, docs, config. The most common failure
+Measure broadly — source, tests, docs, config. The most common failure
 is measuring only the core source, classifying it as small, then also
 reading tests and docs and blowing past the limit.
 
@@ -236,56 +241,47 @@ reading tests and docs and blowing past the limit.
 | 200KB–1MB | Chunk + fan out + aggregate in REPL. |
 | > 1MB | Two-level: chunk, fan out, aggregate chunks, synthesize. |
 
-### 3. Announce
+### 3. Plan
 
-Tell the user what you found and what you plan to do. Example:
-
-> 47 files, ~145KB total. Fanning out 4 parallel subagents: (1) core library,
-> (2) test harness, (3) test cases, (4) docs + config. All results stored in
-> `_comprehend_results`.
-
-Do not read any files before this step.
+Based on what you measured, decide what to read and in what order. For a
+bug fix, focus on the files in the stack trace plus their immediate
+dependencies. For a feature, map the module boundaries first. State your
+plan before reading anything.
 
 ### 4. Execute
 
 Fan out subagents. Each writes to `_comprehend_results[key]`. You read the
-results back. Details are in the next section.
+results back. Details are in the Fan-Out Patterns section below.
 
 ### 5. Iterate
 
 If the aggregated answer has gaps, target those specific areas for deeper
 analysis. The REPL still holds everything from the first pass.
 
-### 6. Answer from the REPL
+### 6. Make Your Changes
 
-After comprehension, the REPL remains running. When the user asks
-follow-up questions, query `_comprehend_results` instead of re-reading
-source files. This keeps your main context window small and available
-for actual work — edits, debugging, new features — rather than filled
-with source code you've already analyzed.
+Now that you understand the code, make your edits. The REPL remains
+available — query `_comprehend_results` whenever you need to check
+something instead of re-reading source files. This keeps your context
+window small and available for reasoning about the actual changes.
 
 ```bash
 python SCRIPTS/repl_client.py REPL_ADDR <<'PYEOF'
-# Answer a specific question without re-reading any files
-print(_comprehend_results["core_library"]["design_patterns"])
+# Check a detail without re-reading source
+print(_comprehend_results["core_library"]["function_signatures"])
 PYEOF
 ```
 
-The REPL is not just a tool for the comprehension phase — it is the
-*product* of the comprehension phase.
-
 ### 7. Shut down the REPL
 
-When the user's comprehension questions are answered and the conversation
-moves on to other work (editing, debugging, new features), shut down the
-REPL:
+When your task is complete, shut down the REPL:
 
 ```bash
 python SCRIPTS/repl_client.py REPL_ADDR --shutdown
 ```
 
 The `nohup` server runs until explicitly stopped. Shut it down when
-comprehension is complete to avoid leaving an orphan process.
+done to avoid leaving an orphan process.
 
 ### The 50KB Rule
 
@@ -419,13 +415,6 @@ python SCRIPTS/chunk_text.py chunk large_file.txt --size 80000 --overlap 200  # 
 
 For structured files (code, markdown), prefer splitting at functions, classes,
 or section headers rather than arbitrary character boundaries.
-
-## When NOT to Comprehend
-
-- **< 50KB total** — Read into REPL variables directly. No subagents needed.
-- **Global questions** — "What is the overall theme?" needs the full picture.
-  Summarize first (in chunks if needed), then analyze the summary whole.
-- **Quick answers** — When speed matters more than thoroughness.
 
 ## References
 
