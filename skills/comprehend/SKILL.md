@@ -45,9 +45,13 @@ verify they are available:
 python --version && nohup --version > /dev/null 2>&1 && echo "ok"
 ```
 
-If this does not print `ok`, **stop here**. Tell the user which command
-is missing. On Windows, both are available in Git Bash. On macOS and
-Linux, both are standard.
+Note that the Python executable may be called python3, or your user may
+have set up a specific tool for running Python which they prefer you to
+use.
+
+If you can't get Python to print `ok`, **stop here**. Tell the user
+which command is missing.  On Windows, both are available in Git Bash.
+On macOS and Linux, both are standard.
 
 ## Script Paths
 
